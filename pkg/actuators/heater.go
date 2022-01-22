@@ -36,6 +36,7 @@ func (s *HeaterServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*p
 func (ha *HeaterActuator) TurnOn() {
 	ha.Status = true
 	ha.Temperature = 28 // arbitrary Celsius temperature
+	ha.Environment.Temperature = 28
 }
 
 func (ha *HeaterActuator) TurnOff() {
@@ -44,13 +45,22 @@ func (ha *HeaterActuator) TurnOff() {
 }
 
 func (ha *HeaterActuator) RaiseTemp() {
-	ha.Temperature = ha.Temperature + 1
+	ha.Temperature += 1
+	if ha.Status {
+		ha.Environment.Temperature += 1
+	}
 }
 
 func (ha *HeaterActuator) LowerTemp() {
-	ha.Temperature = ha.Temperature - 1
+	ha.Temperature -= 1
+	if ha.Status {
+		ha.Environment.Temperature -= 1
+	}
 }
 
 func (ha *HeaterActuator) SetTemp(temp uint) {
 	ha.Temperature = temp
+	if ha.Status {
+		ha.Environment.Temperature = temp
+	}
 }

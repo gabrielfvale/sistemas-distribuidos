@@ -42,9 +42,15 @@ func (fa *FireAlarmActuator) TurnOff() {
 }
 
 func (fa *FireAlarmActuator) SetFireSmoke() {
-	fa.Smoke = true
+	if fa.Status {
+		fa.Smoke = true
+	}
+	fa.Environment.Smoke = true
 }
 
 func (fa *FireAlarmActuator) ClearFireSmoke() {
-	fa.Smoke = false
+	if fa.Status {
+		fa.Smoke = false
+	}
+	fa.Environment.Smoke = false
 }

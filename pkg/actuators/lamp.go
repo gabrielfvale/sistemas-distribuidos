@@ -37,9 +37,11 @@ func (s *LampServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.
 func (la *LampActuator) TurnOn() {
 	la.Status = true
 	la.Luminosity = 100.0
+	la.Environment.Luminosity += 100.0
 }
 
 func (la *LampActuator) TurnOff() {
 	la.Status = false
-	la.Luminosity = 0.0
+	// la.Luminosity = 0.0
+	la.Environment.Luminosity -= 100.0
 }

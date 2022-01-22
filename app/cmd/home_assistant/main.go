@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -57,14 +58,42 @@ func load_actuators(ports map[string]int) {
 
 }
 
+func load_queues() {
+
+}
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
+func processQueue(name string, ws *websocket.Conn) {
+	conn, _ := amqp.Dial(pkg.RABBITMQ_URL)
+	defer conn.Close()
+
+	ch, _ := conn.Channel()
+	defer ch.Close()
+
+	msgs, _ := ch.Consume(name, "home_assistant", true, false, false, false, nil)
+	go func() {
+		for d := range msgs {
+			ws.WriteJSON([]byte(d.Body))
+		}
+	}()
+}
+
 func main() {
 	// Set environment
+	// queues := []string{"luminosity", "smoke", "temperature"}
+
 	actuator_ports := make(map[string]int)
 	actuator_ports["fire"] = 8001
 	actuator_ports["heater"] = 8002
 	actuator_ports["lamp"] = 8003
 
 	environment = pkg.Environment{Temperature: 28, Luminosity: 0, Smoke: false}
+
 	load_sensors()
 	load_actuators(actuator_ports)
 
@@ -101,16 +130,32 @@ func main() {
 
 		log.Println("Websocket Connected!")
 
+		// forever := make(chan bool)
+		// for _, queue := range queues {
+		// 	go processQueue(queue, ws)
+		// }
+
 		for {
 			var message pkg.WebMessage
-			err := ws.ReadJSON(&message)
+			err = ws.ReadJSON(&message)
 			if err != nil {
 				log.Printf("Error ocurred: %v", err)
 				break
 			}
 			log.Println(message)
 
-			if err := ws.WriteJSON(message); err != nil {
+			var res *pb.IssueCommandResponse
+
+			switch message.ActuatorType {
+			case "fire":
+				res, _ = fire_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
+			case "heater":
+				res, _ = heater_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
+			case "lamp":
+				res, _ = lamp_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
+			}
+
+			if err := ws.WriteJSON(res); err != nil {
 				log.Printf("error: %v", err)
 			}
 		}

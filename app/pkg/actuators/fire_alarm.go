@@ -45,6 +45,7 @@ func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.
 }
 
 func (s *FireAlarmServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
+	fmt.Printf("Fire IssueCommand: %s\n", in.Key)
 	switch in.Key {
 	case "TurnOn":
 		s.TurnOn()

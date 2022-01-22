@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -130,10 +131,20 @@ func main() {
 
 		log.Println("Websocket Connected!")
 
-		// forever := make(chan bool)
-		// for _, queue := range queues {
-		// 	go processQueue(queue, ws)
-		// }
+		conn, _ := amqp.Dial(pkg.RABBITMQ_URL)
+		defer conn.Close()
+
+		ch, _ := conn.Channel()
+		defer ch.Close()
+
+		msgs, _ := ch.Consume("luminosity", "home_assistant", true, false, false, false, nil)
+		go func() {
+			for d := range msgs {
+				rec := pkg.SensorMessage{}
+				json.Unmarshal(d.Body, rec)
+				ws.WriteJSON(rec)
+			}
+		}()
 
 		for {
 			var message pkg.WebMessage

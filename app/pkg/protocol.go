@@ -1,10 +1,18 @@
 package pkg
 
+import "time"
+
 var RABBITMQ_URL string = "amqp://guest:guest@localhost:5672"
 
 type WebMessage struct {
 	ActuatorType string `json:"actuatorType"`
 	CommandKey   string `json:"commandKey"`
+}
+
+type SensorMessage struct {
+	Sensor    string    `json:"sensor"`
+	Value     uint32    `json:"value"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type Environment struct {

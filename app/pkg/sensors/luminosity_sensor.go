@@ -49,7 +49,11 @@ func (ls *LuminositySensor) Publish() {
 
 	// Create a 5-second ticker
 	for range time.Tick(5 * time.Second) {
-		body, err := json.Marshal(LuminositySensorMessage{Value: ls.Environment.Luminosity, Timestamp: time.Now()})
+		body, err := json.Marshal(pkg.SensorMessage{
+			Sensor:    "luminosity",
+			Value:     ls.Environment.Luminosity,
+			Timestamp: time.Now(),
+		})
 		failOnError(err, "Failed to marshal json")
 
 		err = ch.Publish(

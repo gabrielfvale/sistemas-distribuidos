@@ -43,6 +43,7 @@ func (s *LampServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty
 }
 
 func (s *LampServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
+	fmt.Println("ISSUING COMMAND FOR LAMP")
 	switch in.Key {
 	case "TurnOn":
 		s.TurnOn()
@@ -57,6 +58,8 @@ func (s *LampServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.
 }
 
 func (la *LampServer) TurnOn() {
+	fmt.Println("Turning on the lamp")
+
 	la.Status = true
 	la.Luminosity = 100.0
 	la.Environment.Luminosity += 100.0

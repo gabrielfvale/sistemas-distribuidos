@@ -2,9 +2,13 @@ package actuators
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -14,8 +18,21 @@ type LampServer struct {
 
 type LampActuator struct {
 	pkg.Actuator
-	Server     *LampServer
 	Luminosity int32
+}
+
+func (la LampActuator) Listen(port int) {
+	log.Printf("Serving LampActuator...")
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		log.Fatalf("LampActuator failed to listen: %v", err)
+	}
+	la.Server = grpc.NewServer()
+	pb.RegisterActuatorServer(la.Server, &LampServer{})
+	// log.Printf("server listening at %v", lis.Addr())
+	if err := la.Server.Serve(lis); err != nil {
+		log.Fatalf("LampActuator failed to serve: %v", err)
+	}
 }
 
 func (s *LampServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {

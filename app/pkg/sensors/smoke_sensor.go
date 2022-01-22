@@ -2,7 +2,7 @@ package sensors
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
@@ -20,7 +20,7 @@ type SmokeSensorMessage struct {
 }
 
 func (ls *SmokeSensor) Publish() {
-	fmt.Println("Publishing smoke Sensor...")
+	log.Printf("Publishing smoke Sensor...")
 	conn, err := amqp.Dial(pkg.RABBITMQ_URL)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()

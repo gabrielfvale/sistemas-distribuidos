@@ -2,7 +2,6 @@ package sensors
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -27,7 +26,7 @@ func failOnError(err error, msg string) {
 }
 
 func (ls *LuminositySensor) Publish() {
-	fmt.Println("Publishing luminosity Sensor...")
+	log.Printf("Publishing luminosity Sensor...")
 	conn, err := amqp.Dial(pkg.RABBITMQ_URL)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()

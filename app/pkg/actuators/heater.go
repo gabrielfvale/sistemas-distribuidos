@@ -2,9 +2,13 @@ package actuators
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -15,6 +19,20 @@ type HeaterActuator struct {
 
 type HeaterServer struct {
 	*pb.UnimplementedActuatorServer
+}
+
+func (ha HeaterActuator) Listen(port int) {
+	log.Printf("Serving HeaterActuator...")
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		log.Fatalf("HeaterActuator failed to listen: %v", err)
+	}
+	ha.Server = grpc.NewServer()
+	pb.RegisterActuatorServer(ha.Server, &HeaterServer{})
+	// log.Printf("server listening at %v", lis.Addr())
+	if err := ha.Server.Serve(lis); err != nil {
+		log.Fatalf("HeaterActuator failed to serve: %v", err)
+	}
 }
 
 func (s *HeaterServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {

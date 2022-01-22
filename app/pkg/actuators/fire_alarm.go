@@ -2,9 +2,13 @@ package actuators
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -15,6 +19,20 @@ type FireAlarmActuator struct {
 
 type FireAlarmServer struct {
 	*pb.UnimplementedActuatorServer
+}
+
+func (fa FireAlarmActuator) Listen(port int) {
+	log.Printf("Serving FireAlarmActuator...")
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		log.Fatalf("FireAlarmActuator failed to listen: %v", err)
+	}
+	fa.Server = grpc.NewServer()
+	pb.RegisterActuatorServer(fa.Server, &FireAlarmServer{})
+	// log.Printf("server listening at %v", lis.Addr())
+	if err := fa.Server.Serve(lis); err != nil {
+		log.Fatalf("FireAlarmActuator failed to serve: %v", err)
+	}
 }
 
 func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {

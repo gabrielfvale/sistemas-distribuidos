@@ -34,6 +34,7 @@ func (ha HeaterServer) Listen(port int) {
 }
 
 func (s *HeaterServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
+	fmt.Println("ISSUING COMMAND FOR HEATER")
 	var commands = [4]*pb.Command{
 		{Id: 1, Key: "TurnOn"},
 		{Id: 2, Key: "TurnOff"},

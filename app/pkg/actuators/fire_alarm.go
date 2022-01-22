@@ -34,6 +34,7 @@ func (fa FireAlarmServer) Listen(port int) {
 }
 
 func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
+	fmt.Println("ISSUING COMMAND FOR FIRE ALARM")
 	var commands = [4]*pb.Command{
 		{Id: 1, Key: "TurnOn"},
 		{Id: 2, Key: "TurnOff"},

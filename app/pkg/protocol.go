@@ -11,14 +11,14 @@ type WebMessage struct {
 
 type SensorMessage struct {
 	Sensor    string    `json:"sensor"`
-	Value     uint32    `json:"value"`
+	Value     int32     `json:"value"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
 type Environment struct {
-	Temperature uint
-	Luminosity  uint32
-	Smoke       bool
+	Temperature int32
+	Luminosity  int32
+	Smoke       int32
 }
 
 type Actuator struct {

@@ -87,8 +87,8 @@ func (ha *HeaterServer) LowerTemp() {
 	}
 }
 
-func (ha *HeaterServer) SetTemp(temp uint) {
-	ha.Temperature = temp
+func (ha *HeaterServer) SetTemp(temp int32) {
+	// ha.Temperature = temp
 	if ha.Status {
 		ha.Environment.Temperature = temp
 	}

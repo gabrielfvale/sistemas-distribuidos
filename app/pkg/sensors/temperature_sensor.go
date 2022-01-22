@@ -11,12 +11,6 @@ import (
 
 type TemperatureSensor struct {
 	pkg.Sensor
-	Temperature uint
-}
-
-type TemperatureSensorMessage struct {
-	Value     uint
-	Timestamp time.Time
 }
 
 func (ls *TemperatureSensor) Publish() {
@@ -43,7 +37,11 @@ func (ls *TemperatureSensor) Publish() {
 
 	// Create a 5-second ticker
 	for range time.Tick(5 * time.Second) {
-		body, err := json.Marshal(TemperatureSensorMessage{Value: ls.Environment.Temperature, Timestamp: time.Now()})
+		body, err := json.Marshal(pkg.SensorMessage{
+			Sensor:    "temperature",
+			Value:     ls.Environment.Temperature,
+			Timestamp: time.Now(),
+		})
 		failOnError(err, "Failed to marshal json")
 
 		err = ch.Publish(

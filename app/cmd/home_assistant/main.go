@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
@@ -59,60 +58,26 @@ func load_actuators(ports map[string]int) {
 
 }
 
-func load_queues() {
-
-}
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
-	}
-}
-
-func processQueue(name string, ws *websocket.Conn) {
-	conn, _ := amqp.Dial(pkg.RABBITMQ_URL)
-	defer conn.Close()
-
-	ch, _ := conn.Channel()
-	defer ch.Close()
-
-	msgs, _ := ch.Consume(name, "home_assistant", true, false, false, false, nil)
-	go func() {
-		for d := range msgs {
-			ws.WriteJSON([]byte(d.Body))
-		}
-	}()
-}
-
 func main() {
 	// Set environment
-	// queues := []string{"luminosity", "smoke", "temperature"}
-
 	actuator_ports := make(map[string]int)
 	actuator_ports["fire"] = 8001
 	actuator_ports["heater"] = 8002
 	actuator_ports["lamp"] = 8003
 
-	environment = pkg.Environment{Temperature: 28, Luminosity: 0, Smoke: false}
+	environment = pkg.Environment{Temperature: 28, Luminosity: 0, Smoke: 0}
 
 	load_sensors()
 	load_actuators(actuator_ports)
 
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports["heater"]), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports["temperature"]), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewActuatorClient(conn)
-
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	_, err = c.GetAvailableCommands(ctx, &emptypb.Empty{})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
-	}
+	c.GetAvailableCommands(context.Background(), &emptypb.Empty{})
 
 	e := echo.New()
 	e.HideBanner = true
@@ -137,11 +102,13 @@ func main() {
 		ch, _ := conn.Channel()
 		defer ch.Close()
 
-		msgs, _ := ch.Consume("luminosity", "home_assistant", true, false, false, false, nil)
+		// luminosity_msgs, _ := ch.Consume("luminosity", "home_assistant", true, false, false, false, nil)
+		// smoke_msgs, _ := ch.Consume("smoke", "home_assistant", true, false, false, false, nil)
+		temperature_msgs, _ := ch.Consume("temperature", "home_assistant", true, false, false, false, nil)
 		go func() {
-			for d := range msgs {
+			for d := range temperature_msgs {
 				rec := pkg.SensorMessage{}
-				json.Unmarshal(d.Body, rec)
+				json.Unmarshal(d.Body, &rec)
 				ws.WriteJSON(rec)
 			}
 		}()

@@ -11,12 +11,6 @@ import (
 
 type LuminositySensor struct {
 	pkg.Sensor
-	Luminosity uint32
-}
-
-type LuminositySensorMessage struct {
-	Value     uint32
-	Timestamp time.Time
 }
 
 func failOnError(err error, msg string) {

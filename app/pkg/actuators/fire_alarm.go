@@ -75,12 +75,12 @@ func (fa *FireAlarmServer) SetFireSmoke() {
 	if fa.Status {
 		fa.Smoke = true
 	}
-	fa.Environment.Smoke = true
+	fa.Environment.Smoke = 1
 }
 
 func (fa *FireAlarmServer) ClearFireSmoke() {
 	if fa.Status {
 		fa.Smoke = false
 	}
-	fa.Environment.Smoke = false
+	fa.Environment.Smoke = 1
 }

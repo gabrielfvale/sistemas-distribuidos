@@ -3,8 +3,8 @@ package actuators
 import (
 	"context"
 
-	"github.com/gabrielfvale/ti0151-sistemas/app/grpc/impl"
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
+	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -13,7 +13,7 @@ type LampServer struct {
 }
 
 type LampActuator struct {
-	impl.Actuator
+	pkg.Actuator
 	Server     *LampServer
 	Luminosity int32
 }

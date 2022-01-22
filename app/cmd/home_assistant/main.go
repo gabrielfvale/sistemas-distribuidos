@@ -7,11 +7,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-)
 
-type Message struct {
-	Message string `json:"message"`
-}
+	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
+)
 
 var upgrader = websocket.Upgrader{}
 
@@ -37,13 +35,13 @@ func main() {
 		log.Println("Connected!")
 
 		for {
-			var message Message
+			var message pkg.WebMessage
 			err := ws.ReadJSON(&message)
 			if err != nil {
 				log.Printf("Error ocurred: %v", err)
 				break
 			}
-			log.Printf(message.Message)
+			log.Println(message)
 
 			if err := ws.WriteJSON(message); err != nil {
 				log.Printf("error: %v", err)

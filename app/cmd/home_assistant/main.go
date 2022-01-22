@@ -1,68 +1,57 @@
 package main
 
 import (
-	"bufio"
-	"io"
 	"log"
-	"net"
-	"os"
-	"strings"
+	"net/http"
+
+	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
+type Message struct {
+	Message string `json:"message"`
+}
+
+var upgrader = websocket.Upgrader{}
+
 func main() {
-	log.Printf("Starting Home Assistant")
+	e := echo.New()
 
-	listen, err := net.Listen("tcp", ":8000")
-	if err != nil {
-		log.Fatalf("Socket listen failed, %s", err)
-		os.Exit(1)
-	}
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-	log.Printf("Home Assistant listening")
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello World")
+	})
 
-	for {
-		conn, err := listen.Accept()
+	e.GET("/ws", func(c echo.Context) error {
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+		ws, err := upgrader.Upgrade(c.Response().Writer, c.Request(), nil)
 		if err != nil {
-			log.Fatalln(err)
-			continue
+			log.Printf("Error found, %v", err)
 		}
-		go connHandler(conn)
-	}
-}
+		defer ws.Close()
 
-func connHandler(conn net.Conn) {
-	defer conn.Close()
+		log.Println("Connected!")
 
-	var (
-		buf = make([]byte, 1024)
-		r   = bufio.NewReader(conn)
-		w   = bufio.NewWriter(conn)
-	)
-
-ILOOP:
-	for {
-		n, err := r.Read(buf)
-		data := string(buf[:n])
-
-		switch err {
-		case io.EOF:
-			break ILOOP
-		case nil:
-			log.Println("Message received:", data)
-			if isTransportOver(data) {
-				break ILOOP
+		for {
+			var message Message
+			err := ws.ReadJSON(&message)
+			if err != nil {
+				log.Printf("Error ocurred: %v", err)
+				break
 			}
-		default:
-			log.Fatalf("Receive data failed:%s", err)
-			return
-		}
-	}
-	w.Write([]byte("Pong"))
-	w.Flush()
-	log.Printf("Send: %s", "Pong")
-}
+			log.Printf(message.Message)
 
-func isTransportOver(data string) (over bool) {
-	over = strings.HasSuffix(data, "\r\n\r\n")
-	return
+			if err := ws.WriteJSON(message); err != nil {
+				log.Printf("error: %v", err)
+			}
+		}
+
+		return nil
+	})
+
+	e.Logger.Fatal(e.Start(":8000"))
 }

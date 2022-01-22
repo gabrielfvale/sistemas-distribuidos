@@ -1,24 +1,35 @@
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useState } from "react";
+import { Box, Button, Chip } from "@mui/material";
+
+const socket = new WebSocket("ws://localhost:8000/ws");
 
 function App() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    socket.onopen = () => {
+      setMessage("Connected");
+      setIsConnected(true);
+    };
+
+    socket.onmessage = (e) => {
+      setMessage("Get message from server: " + e.data);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Box>
+      <Chip
+        label={isConnected ? "CONNECTED" : "NOT CONNECTED"}
+        color={isConnected ? "success" : "error"}
+      />
+      <p>{message}</p>
+    </Box>
   );
 }
 

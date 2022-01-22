@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package proto;
-
-option go_package = "github.com/gabrielfvale/ti0151-sistemas/proto;proto";
-
-service Actuator {}

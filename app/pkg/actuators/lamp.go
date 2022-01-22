@@ -13,24 +13,22 @@ import (
 )
 
 type LampServer struct {
+	pkg.Actuator
+	Luminosity int32
 	*pb.UnimplementedActuatorServer
 }
 
-type LampActuator struct {
-	pkg.Actuator
-	Luminosity int32
-}
-
-func (la LampActuator) Listen(port int) {
+// Create gRPC server
+func (la LampServer) Listen(port int) {
 	log.Printf("Serving LampActuator...")
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("LampActuator failed to listen: %v", err)
 	}
-	la.Server = grpc.NewServer()
-	pb.RegisterActuatorServer(la.Server, &LampServer{})
+	s := grpc.NewServer()
+	pb.RegisterActuatorServer(s, &LampServer{})
 	// log.Printf("server listening at %v", lis.Addr())
-	if err := la.Server.Serve(lis); err != nil {
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("LampActuator failed to serve: %v", err)
 	}
 }
@@ -38,26 +36,33 @@ func (la LampActuator) Listen(port int) {
 func (s *LampServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
 	var commands = [3]*pb.Command{
 		{Id: 1, Key: "TurnOn"},
+		{Id: 2, Key: "TurnOff"},
 	}
 
 	return &pb.AvailableCommandsResponse{Commands: commands[:]}, nil
 }
 
 func (s *LampServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
-	return &pb.IssueCommandResponse{}, nil
+	switch in.Key {
+	case "TurnOn":
+		s.TurnOn()
+	case "TurnOff":
+		s.TurnOff()
+	}
+	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
 
 func (s *LampServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.PropertiesResponse, error) {
 	return &pb.PropertiesResponse{}, nil
 }
 
-func (la *LampActuator) TurnOn() {
+func (la *LampServer) TurnOn() {
 	la.Status = true
 	la.Luminosity = 100.0
 	la.Environment.Luminosity += 100.0
 }
 
-func (la *LampActuator) TurnOff() {
+func (la *LampServer) TurnOff() {
 	la.Status = false
 	// la.Luminosity = 0.0
 	la.Environment.Luminosity -= 100.0

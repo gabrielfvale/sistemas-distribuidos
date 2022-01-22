@@ -12,25 +12,23 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type FireAlarmActuator struct {
+type FireAlarmServer struct {
 	pkg.Actuator
 	Smoke bool
-}
-
-type FireAlarmServer struct {
 	*pb.UnimplementedActuatorServer
 }
 
-func (fa FireAlarmActuator) Listen(port int) {
+// Create gRPC server
+func (fa FireAlarmServer) Listen(port int) {
 	log.Printf("Serving FireAlarmActuator...")
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("FireAlarmActuator failed to listen: %v", err)
 	}
-	fa.Server = grpc.NewServer()
-	pb.RegisterActuatorServer(fa.Server, &FireAlarmServer{})
+	s := grpc.NewServer()
+	pb.RegisterActuatorServer(s, &FireAlarmServer{})
 	// log.Printf("server listening at %v", lis.Addr())
-	if err := fa.Server.Serve(lis); err != nil {
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("FireAlarmActuator failed to serve: %v", err)
 	}
 }
@@ -47,29 +45,39 @@ func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.
 }
 
 func (s *FireAlarmServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
-	return &pb.IssueCommandResponse{}, nil
+	switch in.Key {
+	case "TurnOn":
+		s.TurnOn()
+	case "TurnOff":
+		s.TurnOff()
+	case "SetFireSmoke":
+		s.SetFireSmoke()
+	case "ClearFireSmoke":
+		s.ClearFireSmoke()
+	}
+	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
 
 func (s *FireAlarmServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.PropertiesResponse, error) {
 	return &pb.PropertiesResponse{}, nil
 }
 
-func (fa *FireAlarmActuator) TurnOn() {
+func (fa *FireAlarmServer) TurnOn() {
 	fa.Status = true
 }
 
-func (fa *FireAlarmActuator) TurnOff() {
+func (fa *FireAlarmServer) TurnOff() {
 	fa.Status = false
 }
 
-func (fa *FireAlarmActuator) SetFireSmoke() {
+func (fa *FireAlarmServer) SetFireSmoke() {
 	if fa.Status {
 		fa.Smoke = true
 	}
 	fa.Environment.Smoke = true
 }
 
-func (fa *FireAlarmActuator) ClearFireSmoke() {
+func (fa *FireAlarmServer) ClearFireSmoke() {
 	if fa.Status {
 		fa.Smoke = false
 	}

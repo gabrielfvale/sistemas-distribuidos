@@ -12,71 +12,82 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type HeaterActuator struct {
+type HeaterServer struct {
 	pkg.Actuator
 	Temperature uint
-}
-
-type HeaterServer struct {
 	*pb.UnimplementedActuatorServer
 }
 
-func (ha HeaterActuator) Listen(port int) {
+// Create gRPC server
+func (ha HeaterServer) Listen(port int) {
 	log.Printf("Serving HeaterActuator...")
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("HeaterActuator failed to listen: %v", err)
 	}
-	ha.Server = grpc.NewServer()
-	pb.RegisterActuatorServer(ha.Server, &HeaterServer{})
+	s := grpc.NewServer()
+	pb.RegisterActuatorServer(s, &HeaterServer{})
 	// log.Printf("server listening at %v", lis.Addr())
-	if err := ha.Server.Serve(lis); err != nil {
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("HeaterActuator failed to serve: %v", err)
 	}
 }
 
 func (s *HeaterServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
-	var commands = [3]*pb.Command{
-		{Id: 1, Key: "command1"},
+	var commands = [4]*pb.Command{
+		{Id: 1, Key: "TurnOn"},
+		{Id: 2, Key: "TurnOff"},
+		{Id: 3, Key: "RaiseTemp"},
+		{Id: 4, Key: "LowerTemp"},
 	}
 
 	return &pb.AvailableCommandsResponse{Commands: commands[:]}, nil
 }
 
 func (s *HeaterServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
-	return &pb.IssueCommandResponse{}, nil
+	switch in.Key {
+	case "TurnOn":
+		s.TurnOn()
+	case "TurnOff":
+		s.TurnOff()
+	case "RaiseTemp":
+		s.RaiseTemp()
+	case "LowerTemp":
+		s.LowerTemp()
+	}
+	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
 
 func (s *HeaterServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.PropertiesResponse, error) {
 	return &pb.PropertiesResponse{}, nil
 }
 
-func (ha *HeaterActuator) TurnOn() {
+func (ha *HeaterServer) TurnOn() {
 	ha.Status = true
 	ha.Temperature = 28 // arbitrary Celsius temperature
 	ha.Environment.Temperature = 28
 }
 
-func (ha *HeaterActuator) TurnOff() {
+func (ha *HeaterServer) TurnOff() {
 	ha.Status = false
 	ha.Temperature = 0
 }
 
-func (ha *HeaterActuator) RaiseTemp() {
+func (ha *HeaterServer) RaiseTemp() {
 	ha.Temperature += 1
 	if ha.Status {
 		ha.Environment.Temperature += 1
 	}
 }
 
-func (ha *HeaterActuator) LowerTemp() {
+func (ha *HeaterServer) LowerTemp() {
 	ha.Temperature -= 1
 	if ha.Status {
 		ha.Environment.Temperature -= 1
 	}
 }
 
-func (ha *HeaterActuator) SetTemp(temp uint) {
+func (ha *HeaterServer) SetTemp(temp uint) {
 	ha.Temperature = temp
 	if ha.Status {
 		ha.Environment.Temperature = temp

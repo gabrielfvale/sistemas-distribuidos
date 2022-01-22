@@ -28,9 +28,9 @@ var (
 	smoke_sensor       sensors.SmokeSensor
 	temperature_sensor sensors.TemperatureSensor
 
-	fire_actuator   actuators.FireAlarmActuator
-	heater_actuator actuators.HeaterActuator
-	lamp_actuator   actuators.LampActuator
+	fire_actuator   actuators.FireAlarmServer
+	heater_actuator actuators.HeaterServer
+	lamp_actuator   actuators.LampServer
 )
 
 func load_sensors() {
@@ -52,8 +52,8 @@ func load_actuators(ports map[string]int) {
 	lamp_actuator.Environment = &environment
 
 	go fire_actuator.Listen(ports["fire"])
-	// go heater_actuator.Listen(ports["heater"])
-	// go heater_actuator.Listen(ports["lamp"])
+	go heater_actuator.Listen(ports["heater"])
+	go lamp_actuator.Listen(ports["lamp"])
 
 }
 
@@ -69,7 +69,7 @@ func main() {
 	load_actuators(actuator_ports)
 
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports["fire"]), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports["heater"]), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

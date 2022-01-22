@@ -18,8 +18,11 @@ type FireAlarmServer struct {
 }
 
 func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
-	var commands = [3]*pb.Command{
-		{Id: 1, Key: "command1"},
+	var commands = [4]*pb.Command{
+		{Id: 1, Key: "TurnOn"},
+		{Id: 2, Key: "TurnOff"},
+		{Id: 3, Key: "SetFireSmoke"},
+		{Id: 4, Key: "ClearFireSmoke"},
 	}
 
 	return &pb.AvailableCommandsResponse{Commands: commands[:]}, nil

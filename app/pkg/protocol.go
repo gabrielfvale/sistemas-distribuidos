@@ -1,5 +1,7 @@
 package pkg
 
+var RABBITMQ_URL string = "amqp://guest:guest@localhost:5672"
+
 type WebMessage struct {
 	Message string `json:"message"`
 }
@@ -18,8 +20,9 @@ type Actuator struct {
 }
 
 type SensorInterface interface {
-	Connect()
-	SetEnvironment()
+	Connect() error
+	Consume() error
+	SetEnvironment() error
 }
 
 type Sensor struct {

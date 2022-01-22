@@ -1,4 +1,4 @@
-module github.com/gabrielfvale/ti0151-sistemas
+module github.com/gabrielfvale/ti0151-sistemas/app
 
 go 1.17
 

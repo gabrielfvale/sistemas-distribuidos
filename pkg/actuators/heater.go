@@ -3,8 +3,8 @@ package actuators
 import (
 	"context"
 
-	"github.com/gabrielfvale/ti0151-sistemas/grpc/impl"
-	pb "github.com/gabrielfvale/ti0151-sistemas/grpc/proto"
+	"github.com/gabrielfvale/ti0151-sistemas/app/grpc/impl"
+	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

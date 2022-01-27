@@ -1,4 +1,4 @@
-package sensors
+package main
 
 import (
 	"encoding/json"
@@ -16,11 +16,11 @@ type SmokeSensor struct {
 func (ls *SmokeSensor) Publish() {
 	log.Printf("Publishing smoke Sensor...")
 	conn, err := amqp.Dial(pkg.RABBITMQ_URL)
-	failOnError(err, "Failed to connect to RabbitMQ")
+	pkg.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	pkg.FailOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
 	queue_name := "smoke"
@@ -33,16 +33,19 @@ func (ls *SmokeSensor) Publish() {
 		false,      // no-wait
 		nil,        // arguments
 	)
-	failOnError(err, "Failed to declare a queue")
+	pkg.FailOnError(err, "Failed to declare a queue")
 
 	// Create a 5-second ticker
 	for range time.Tick(5 * time.Second) {
-		body, err := json.Marshal(pkg.SensorMessage{
+		enviroment := pkg.ReadEnviromentData(ls.EnvironmentConn)
+		message := pkg.SensorMessage{
 			Sensor:    "smoke",
-			Value:     ls.Environment.Smoke,
+			Value:     enviroment.Smoke,
 			Timestamp: time.Now(),
-		})
-		failOnError(err, "Failed to marshal json")
+		}
+
+		body, err := json.Marshal(message)
+		pkg.FailOnError(err, "Failed to marshal json")
 
 		err = ch.Publish(
 			"",     // exchange
@@ -53,6 +56,14 @@ func (ls *SmokeSensor) Publish() {
 				ContentType: "application/json",
 				Body:        body,
 			})
-		failOnError(err, "Failed to publish a message")
+		pkg.FailOnError(err, "Failed to publish a message")
+		log.Printf("Sent data to queue: %v", message)
 	}
+}
+
+func main() {
+	smoke := SmokeSensor{}
+	smoke.Name = "smoke"
+	smoke.EnvironmentConn = pkg.ConnectToEnviroment()
+	smoke.Publish()
 }

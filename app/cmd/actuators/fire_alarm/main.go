@@ -1,10 +1,12 @@
-package actuators
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strconv"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
@@ -14,13 +16,13 @@ import (
 
 type FireAlarmServer struct {
 	pkg.Actuator
-	Smoke bool
 	*pb.UnimplementedActuatorServer
 }
 
 // Create gRPC server
 func (fa FireAlarmServer) Listen(port int) {
-	log.Printf("Serving FireAlarmActuator...")
+
+	log.Printf("Serving FireAlarmActuator on port %d", port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("FireAlarmActuator failed to listen: %v", err)
@@ -31,6 +33,21 @@ func (fa FireAlarmServer) Listen(port int) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("FireAlarmActuator failed to serve: %v", err)
 	}
+}
+
+func main() {
+	args := os.Args[1:]
+	if len(args) < 1 {
+		log.Fatalf("No port argument provided")
+	}
+	server := FireAlarmServer{}
+	server.Name = "Fire alarm"
+
+	port, err := strconv.Atoi(args[0])
+	if err != nil {
+		log.Fatalf("Could not parse port")
+	}
+	server.Listen(port)
 }
 
 func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
@@ -46,16 +63,18 @@ func (s *FireAlarmServer) GetAvailableCommands(ctx context.Context, in *emptypb.
 }
 
 func (s *FireAlarmServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
-	fmt.Printf("Fire IssueCommand: %s\n", in.Key)
+	log.Printf("RECEIVED ISSUE COMMAND %v", in.Key)
+	s.EnvironmentConn = pkg.ConnectToEnviroment()
+	env := pkg.ReadEnviromentData(s.EnvironmentConn)
 	switch in.Key {
 	case "TurnOn":
 		s.TurnOn()
 	case "TurnOff":
 		s.TurnOff()
 	case "SetFireSmoke":
-		s.SetFireSmoke()
+		s.SetFireSmoke(env)
 	case "ClearFireSmoke":
-		s.ClearFireSmoke()
+		s.ClearFireSmoke(env)
 	}
 	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
@@ -72,16 +91,14 @@ func (fa *FireAlarmServer) TurnOff() {
 	fa.Status = false
 }
 
-func (fa *FireAlarmServer) SetFireSmoke() {
+func (fa *FireAlarmServer) SetFireSmoke(env pkg.Environment) {
 	if fa.Status {
-		fa.Smoke = true
+		pkg.WriteEnviromentData(fa.EnvironmentConn, "Temperature", 1)
 	}
-	fa.Environment.Smoke = 1
 }
 
-func (fa *FireAlarmServer) ClearFireSmoke() {
+func (fa *FireAlarmServer) ClearFireSmoke(env pkg.Environment) {
 	if fa.Status {
-		fa.Smoke = false
+		pkg.WriteEnviromentData(fa.EnvironmentConn, "Temperature", 0)
 	}
-	fa.Environment.Smoke = 1
 }

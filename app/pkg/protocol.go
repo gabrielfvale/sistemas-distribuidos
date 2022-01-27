@@ -1,6 +1,9 @@
 package pkg
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 var RABBITMQ_URL string = "amqp://guest:guest@localhost:5672"
 
@@ -21,11 +24,21 @@ type Environment struct {
 	Smoke       int32
 }
 
+type EnviromentMessageData struct {
+	Field string
+	Value int32
+}
+
+type EnvironmentMessage struct {
+	Type string
+	Data EnviromentMessageData
+}
+
 type Actuator struct {
-	Name        string
-	Health      string
-	Status      bool
-	Environment *Environment
+	Name            string
+	Health          string
+	Status          bool
+	EnvironmentConn net.Conn
 }
 
 type SensorInterface interface {
@@ -35,6 +48,6 @@ type SensorInterface interface {
 }
 
 type Sensor struct {
-	Name        string
-	Environment *Environment
+	Name            string
+	EnvironmentConn net.Conn
 }

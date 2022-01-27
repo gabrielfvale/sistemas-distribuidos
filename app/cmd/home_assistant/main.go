@@ -13,50 +13,12 @@ import (
 	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
-	"github.com/gabrielfvale/ti0151-sistemas/app/pkg/actuators"
-	"github.com/gabrielfvale/ti0151-sistemas/app/pkg/sensors"
 )
 
 var upgrader = websocket.Upgrader{}
-
-var (
-	environment        pkg.Environment
-	luminosity_sensor  sensors.LuminositySensor
-	smoke_sensor       sensors.SmokeSensor
-	temperature_sensor sensors.TemperatureSensor
-
-	fire_actuator   actuators.FireAlarmServer
-	heater_actuator actuators.HeaterServer
-	lamp_actuator   actuators.LampServer
-)
-
-func load_sensors() {
-	// Set sensors
-	luminosity_sensor.Environment = &environment
-	smoke_sensor.Environment = &environment
-	temperature_sensor.Environment = &environment
-
-	go luminosity_sensor.Publish()
-
-	go smoke_sensor.Publish()
-
-	go temperature_sensor.Publish()
-}
-
-func load_actuators(ports map[string]int) {
-	fire_actuator.Environment = &environment
-	heater_actuator.Environment = &environment
-	lamp_actuator.Environment = &environment
-
-	go fire_actuator.Listen(ports["fire"])
-	go heater_actuator.Listen(ports["heater"])
-	go lamp_actuator.Listen(ports["lamp"])
-
-}
 
 func main() {
 	// Set environment
@@ -64,20 +26,6 @@ func main() {
 	actuator_ports["fire"] = 8001
 	actuator_ports["heater"] = 8002
 	actuator_ports["lamp"] = 8003
-
-	environment = pkg.Environment{Temperature: 28, Luminosity: 0, Smoke: 0}
-
-	load_sensors()
-	load_actuators(actuator_ports)
-
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports["temperature"]), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-	c := pb.NewActuatorClient(conn)
-	c.GetAvailableCommands(context.Background(), &emptypb.Empty{})
 
 	e := echo.New()
 	e.HideBanner = true
@@ -120,18 +68,18 @@ func main() {
 				log.Printf("Error ocurred: %v", err)
 				break
 			}
-			log.Println(message)
+			log.Println(message, actuator_ports[message.ActuatorType])
 
 			var res *pb.IssueCommandResponse
-
-			switch message.ActuatorType {
-			case "fire":
-				res, _ = fire_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
-			case "heater":
-				res, _ = heater_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
-			case "lamp":
-				res, _ = lamp_actuator.IssueCommand(context.Background(), &pb.IssueCommandRequest{Key: message.CommandKey})
+			conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", actuator_ports[message.ActuatorType]), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				log.Fatalf("did not connect: %v", err)
 			}
+			defer conn.Close()
+			c := pb.NewActuatorClient(conn)
+			c.IssueCommand(context.Background(), &pb.IssueCommandRequest{
+				Key: message.CommandKey,
+			})
 
 			if err := ws.WriteJSON(res); err != nil {
 				log.Printf("error: %v", err)

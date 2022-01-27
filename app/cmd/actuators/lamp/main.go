@@ -1,10 +1,12 @@
-package actuators
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strconv"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
@@ -20,7 +22,7 @@ type LampServer struct {
 
 // Create gRPC server
 func (la LampServer) Listen(port int) {
-	log.Printf("Serving LampActuator...")
+	log.Printf("Serving LampActuator on port %d", port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("LampActuator failed to listen: %v", err)
@@ -33,6 +35,21 @@ func (la LampServer) Listen(port int) {
 	}
 }
 
+func main() {
+	args := os.Args[1:]
+	if len(args) < 1 {
+		log.Fatalf("No port argument provided")
+	}
+	server := LampServer{}
+	server.Name = "Lamp"
+
+	port, err := strconv.Atoi(args[0])
+	if err != nil {
+		log.Fatalf("Could not parse port")
+	}
+	server.Listen(port)
+}
+
 func (s *LampServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
 	var commands = [3]*pb.Command{
 		{Id: 1, Key: "TurnOn"},
@@ -43,12 +60,14 @@ func (s *LampServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty
 }
 
 func (s *LampServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
-	fmt.Println("ISSUING COMMAND FOR LAMP")
+	log.Printf("RECEIVED ISSUE COMMAND %v", in.Key)
+	s.EnvironmentConn = pkg.ConnectToEnviroment()
+	env := pkg.ReadEnviromentData(s.EnvironmentConn)
 	switch in.Key {
 	case "TurnOn":
-		s.TurnOn()
+		s.TurnOn(env)
 	case "TurnOff":
-		s.TurnOff()
+		s.TurnOff(env)
 	}
 	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
@@ -57,16 +76,14 @@ func (s *LampServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*pb.
 	return &pb.PropertiesResponse{}, nil
 }
 
-func (la *LampServer) TurnOn() {
+func (la *LampServer) TurnOn(env pkg.Environment) {
 	fmt.Println("Turning on the lamp")
-
 	la.Status = true
 	la.Luminosity = 100.0
-	la.Environment.Luminosity += 100.0
+	pkg.WriteEnviromentData(la.EnvironmentConn, "Luminosity", env.Luminosity+100)
 }
 
-func (la *LampServer) TurnOff() {
+func (la *LampServer) TurnOff(env pkg.Environment) {
 	la.Status = false
-	// la.Luminosity = 0.0
-	la.Environment.Luminosity -= 100.0
+	pkg.WriteEnviromentData(la.EnvironmentConn, "Luminosity", env.Luminosity-100)
 }

@@ -1,10 +1,12 @@
-package actuators
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strconv"
 
 	pb "github.com/gabrielfvale/ti0151-sistemas/app/grpc/proto"
 	"github.com/gabrielfvale/ti0151-sistemas/app/pkg"
@@ -20,7 +22,8 @@ type HeaterServer struct {
 
 // Create gRPC server
 func (ha HeaterServer) Listen(port int) {
-	log.Printf("Serving HeaterActuator...")
+	ha.EnvironmentConn = pkg.ConnectToEnviroment()
+	log.Printf("Serving HeaterActuator on port %d", port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("HeaterActuator failed to listen: %v", err)
@@ -31,6 +34,22 @@ func (ha HeaterServer) Listen(port int) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("HeaterActuator failed to serve: %v", err)
 	}
+}
+
+func main() {
+	args := os.Args[1:]
+	if len(args) < 1 {
+		log.Fatalf("No port argument provided")
+	}
+	server := HeaterServer{}
+	server.Name = "Heater"
+	server.EnvironmentConn = pkg.ConnectToEnviroment()
+
+	port, err := strconv.Atoi(args[0])
+	if err != nil {
+		log.Fatalf("Could not parse port")
+	}
+	server.Listen(port)
 }
 
 func (s *HeaterServer) GetAvailableCommands(ctx context.Context, in *emptypb.Empty) (*pb.AvailableCommandsResponse, error) {
@@ -46,15 +65,19 @@ func (s *HeaterServer) GetAvailableCommands(ctx context.Context, in *emptypb.Emp
 }
 
 func (s *HeaterServer) IssueCommand(ctx context.Context, in *pb.IssueCommandRequest) (*pb.IssueCommandResponse, error) {
+	log.Printf("RECEIVED ISSUE COMMAND %v", in.Key)
+	s.EnvironmentConn = pkg.ConnectToEnviroment()
+	env := pkg.ReadEnviromentData(s.EnvironmentConn)
+
 	switch in.Key {
 	case "TurnOn":
-		s.TurnOn()
+		s.TurnOn(env)
 	case "TurnOff":
 		s.TurnOff()
 	case "RaiseTemp":
-		s.RaiseTemp()
+		s.RaiseTemp(env)
 	case "LowerTemp":
-		s.LowerTemp()
+		s.LowerTemp(env)
 	}
 	return &pb.IssueCommandResponse{Status: "OK"}, nil
 }
@@ -63,10 +86,10 @@ func (s *HeaterServer) GetProperties(ctx context.Context, in *emptypb.Empty) (*p
 	return &pb.PropertiesResponse{}, nil
 }
 
-func (ha *HeaterServer) TurnOn() {
+func (ha *HeaterServer) TurnOn(env pkg.Environment) {
 	ha.Status = true
 	ha.Temperature = 28 // arbitrary Celsius temperature
-	ha.Environment.Temperature = 28
+	pkg.WriteEnviromentData(ha.EnvironmentConn, "Temperature", 28)
 }
 
 func (ha *HeaterServer) TurnOff() {
@@ -74,23 +97,20 @@ func (ha *HeaterServer) TurnOff() {
 	ha.Temperature = 0
 }
 
-func (ha *HeaterServer) RaiseTemp() {
+func (ha *HeaterServer) RaiseTemp(env pkg.Environment) {
 	ha.Temperature += 1
 	if ha.Status {
-		ha.Environment.Temperature += 1
+		pkg.WriteEnviromentData(ha.EnvironmentConn, "Temperature", env.Temperature+1)
 	}
 }
 
-func (ha *HeaterServer) LowerTemp() {
+func (ha *HeaterServer) LowerTemp(env pkg.Environment) {
 	ha.Temperature -= 1
 	if ha.Status {
-		ha.Environment.Temperature -= 1
+		pkg.WriteEnviromentData(ha.EnvironmentConn, "Temperature", env.Temperature-1)
 	}
 }
 
 func (ha *HeaterServer) SetTemp(temp int32) {
-	// ha.Temperature = temp
-	if ha.Status {
-		ha.Environment.Temperature = temp
-	}
+
 }
